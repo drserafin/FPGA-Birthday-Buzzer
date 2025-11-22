@@ -1,0 +1,22 @@
+`timescale 1ns / 1ps
+
+
+
+module seven_seg_decoder(
+    input wire [4:0] sw,
+    output reg [6:0] seg // a-g
+);
+
+   always @(posedge clk) begin
+    an <= 4'b1110; // Activate right-most digit (active low)
+    case(note_index)
+        // Segments are usually: g f e d c b a
+        0: seg <= 7'b1000110; // C (a,d,e,f ON -> 0; b,c,g OFF -> 1)
+        1: seg <= 7'b0100001; // d (b,c,d,e,g ON)
+        2: seg <= 7'b0000110; // E (a,d,e,f,g ON)
+        3: seg <= 7'b0001110; // F (a,e,f,g ON)
+        default: seg <= 7'b1111111; // OFF
+    endcase
+end
+
+endmodule
