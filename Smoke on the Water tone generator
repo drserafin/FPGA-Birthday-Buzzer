@@ -1,0 +1,165 @@
+`timescale 1ns / 1ps
+
+
+module tone_gen(
+    input clk,
+    input enable,
+    input note_c,
+    input note_d,
+    input note_e,
+    input note_f,
+    input play_melody,
+    output reg buzzer_out
+);
+
+    // --------------------------------------------------------
+    // 1. DEFINE FREQUENCIES (Key: G Minor)
+    // Formula: Period = 100,000,000 / (Freq * 2)
+    // --------------------------------------------------------
+    // Standard Notes (Switches 0-3)
+    parameter C4 = 191113; 
+    parameter D4 = 170262; 
+    parameter E4 = 151686; 
+    parameter F4 = 143173; 
+    
+    // Smoke on the Water Riff Notes (G Minor Blues)
+    parameter G3  = 255102; // 196 Hz (Low G)
+    parameter Bb3 = 214518; // 233 Hz (B Flat)
+    parameter C4_Rock = 191113; // 261 Hz (Middle C)
+    parameter Db4 = 180386; // 277 Hz (D Flat / C Sharp)
+    
+    parameter SILENCE = 0;
+
+    // --------------------------------------------------------
+    // 2. NOTE SELECTION
+    // --------------------------------------------------------
+    reg [19:0] period_in; 
+    reg [19:0] melody_period; 
+    
+    always @(*) begin
+        if (play_melody) begin
+            period_in = melody_period; 
+        end else if (note_c) period_in = C4;
+        else if (note_d) period_in = D4;
+        else if (note_e) period_in = E4;
+        else if (note_f) period_in = F4;
+        else period_in = SILENCE;
+    end
+
+    // --------------------------------------------------------
+    // 3. TONE GENERATION 
+    // --------------------------------------------------------
+    reg [19:0] counter = 0;
+    always @(posedge clk) begin
+        if (period_in != 0) begin
+            if (counter >= period_in) begin
+                counter <= 0;
+                buzzer_out <= ~buzzer_out;
+            end else begin
+                counter <= counter + 1;
+            end
+        end else begin
+            buzzer_out <= 0;
+            counter <= 0;
+        end
+    end
+
+    // --------------------------------------------------------
+    // 4. SEQUENCER: "Smoke on the Water"
+    // --------------------------------------------------------
+    reg [27:0] tempo_cnt = 0; 
+    reg [5:0] note_step = 0;  
+    
+    // Tempo: ~112 BPM. 
+    // 13.5M ticks = ~0.13 seconds per step
+    parameter BEAT_SPEED = 13_500_000; 
+
+    always @(posedge clk) begin
+        if (play_melody) begin
+            if (tempo_cnt >= BEAT_SPEED) begin
+                tempo_cnt <= 0;
+                if (note_step < 47) 
+                    note_step <= note_step + 1;
+                else
+                    note_step <= 0; // Loop
+            end else begin
+                tempo_cnt <= tempo_cnt + 1;
+            end
+        end else begin
+            tempo_cnt <= 0;
+            note_step <= 0;
+        end
+    end
+
+    // The Legendary Riff
+    // 0-0-0-5-5-8
+    always @(*) begin
+        case (note_step)
+            // Phrase 1: Bum, Bum, Buuum (G - Bb - C)
+            0: melody_period = G3; 
+            1: melody_period = G3; 
+            2: melody_period = SILENCE; 
+            
+            3: melody_period = Bb3;
+            4: melody_period = Bb3; 
+            5: melody_period = SILENCE; 
+            
+            6: melody_period = C4_Rock; 
+            7: melody_period = C4_Rock; 
+            8: melody_period = C4_Rock; // Hold
+            9: melody_period = C4_Rock; // Hold
+            10: melody_period = SILENCE; 
+            11: melody_period = SILENCE; 
+
+            // Phrase 2: Bum, Bum, Ba-bum (G - Bb - Db - C)
+            12: melody_period = G3; 
+            13: melody_period = G3; 
+            14: melody_period = SILENCE; 
+            
+            15: melody_period = Bb3; 
+            16: melody_period = Bb3; 
+            17: melody_period = SILENCE; 
+            
+            18: melody_period = Db4; // The dissonant note!
+            19: melody_period = Db4; 
+            20: melody_period = C4_Rock; 
+            21: melody_period = C4_Rock; 
+            22: melody_period = C4_Rock; 
+            23: melody_period = SILENCE; 
+            24: melody_period = SILENCE; 
+
+            // Phrase 3: Bum, Bum, Buuum... Bum, Bum. (G - Bb - C - Bb - G)
+            25: melody_period = G3; 
+            26: melody_period = G3; 
+            27: melody_period = SILENCE; 
+            
+            28: melody_period = Bb3; 
+            29: melody_period = Bb3; 
+            30: melody_period = SILENCE; 
+            
+            31: melody_period = C4_Rock; 
+            32: melody_period = C4_Rock; 
+            33: melody_period = SILENCE; 
+            
+            34: melody_period = Bb3; 
+            35: melody_period = Bb3; 
+            36: melody_period = SILENCE; 
+            
+            37: melody_period = G3; 
+            38: melody_period = G3; 
+            39: melody_period = G3; 
+            40: melody_period = G3; // Long Hold
+            41: melody_period = G3; 
+            42: melody_period = G3; 
+            
+            43: melody_period = SILENCE; 
+            44: melody_period = SILENCE; 
+            45: melody_period = SILENCE; 
+            46: melody_period = SILENCE; 
+            47: melody_period = SILENCE; 
+
+            default: melody_period = SILENCE;
+        endcase
+    end
+
+endmodule
